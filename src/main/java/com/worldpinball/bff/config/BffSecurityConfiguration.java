@@ -6,13 +6,17 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter;
 import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import org.springframework.web.server.session.CookieWebSessionIdResolver;
+import org.springframework.web.server.session.WebSessionIdResolver;
 
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,6 +34,20 @@ public class BffSecurityConfiguration {
             .headers(headers -> headers
                 .frameOptions(frame -> frame.mode(XFrameOptionsServerHttpHeadersWriter.Mode.DENY))
                 .contentTypeOptions(Customizer.withDefaults())
+                .hsts(hsts -> hsts
+                    .maxAge(Duration.ofDays(730))
+                    .includeSubdomains(true)
+                    .preload(true)
+                )
+                .contentSecurityPolicy(csp -> csp
+                    .policyDirectives("default-src 'self'; frame-ancestors 'none';")
+                )
+                .referrerPolicy(referrer -> referrer
+                    .policy(ReferrerPolicyServerHttpHeadersWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
+                )
+                .permissionsPolicy(permissions -> permissions
+                    .policy("accelerometer=(), camera=(), geolocation=(), microphone=()")
+                )
             )
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers("/alive", "/health", "/actuator/**").permitAll()
@@ -41,6 +59,20 @@ public class BffSecurityConfiguration {
         clientRegistrationRepository.ifPresent(repo -> spec.oauth2Login(Customizer.withDefaults()));
 
         return spec.build();
+    }
+
+    @Bean
+    public WebSessionIdResolver webSessionIdResolver() {
+        CookieWebSessionIdResolver resolver = new CookieWebSessionIdResolver();
+        resolver.setCookieName("__Host-worldpinball-session");
+        resolver.addCookieInitializer(builder -> {
+            builder.path("/");
+            builder.secure(true);
+            builder.httpOnly(true);
+            builder.sameSite("Lax");
+            builder.maxAge(Duration.ofHours(8));
+        });
+        return resolver;
     }
 
     @Bean
