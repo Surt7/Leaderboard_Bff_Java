@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package worldpinball.gamesessions.v1;
+option java_multiple_files = true;
+option java_package = "com.worldpinball.leaderboard.grpc.v1";
+option java_outer_classname = "GameSessionProto";
+option csharp_namespace = "WorldPinball.Protos.V1.GameSessions";
+option go_package = "SetSecrets/internal/proto/gamesession";
+
+// Add player action
+message AddPlayerRequest {
+  string session_id = 1;
+  int32 slot_number = 2;
+  optional string user_id = 3;
+  optional string guest_initials = 4;
+}
+
+message AddPlayerResponse {
+  bool success = 1;
+  int32 slot_number = 2;
+  string message = 3;
+}
+
+// kicking player from lobby
+message KickPlayerRequest {
+  string session_id = 1;
+  int32 slot_number = 2;
+  optional string reason = 3;
+}
+
+message KickPlayerResponse {
+  bool success = 1;
+  int32 slot_number = 2;
+  string message = 3;
+}
+
+// Session watch
+message PlayerSlotInfo {
+  int32 slot_number = 1;
+  bool is_occupied = 2;
+  optional string user_id = 3;
+  optional string guest_initials = 4;
+}
+
+message GetLobbyRequest {
+  string session_id = 1;
+}
+
+message WatchLobbyRequest {
+  string session_id = 1;
+}
+
+message SessionLobbyResponse {
+  string session_id = 1;
+  string session_state = 2;
+  repeated PlayerSlotInfo slots = 3;
+}
+
+message LaunchSessionRequest {
+  string session_id = 1;
+}
+
+message LaunchSessionResponse {
+  bool success = 1;
+  string session_id = 2;
+  string message = 3;
+}
+
+message RecordBallScoreRequest {
+  string session_id = 1;
+  string device_id = 2;
+  int32 slot_number = 3;
+  int32 ball_number = 4;
+  int64 score = 5;
+}
+
+message RecordBallScoreResponse {
+  bool success = 1;
+  string session_id = 2;
+  int32 slot_number = 3;
+  int32 ball_number = 4;
+  int64 score = 5;
+  string message = 6;
+}
+
+// High-frequency telemetry streaming messages
+message ScoreDeltaRequest {
+  string session_id = 1;
+  string device_id = 2;
+  int32 slot_number = 3;
+  int64 points_delta = 4;
+  string trigger_event = 5; // e.g. "BUMPER", "RAMP", "TARGET", "SPINNER"
+  int64 timestamp_utc_ms = 6;
+}
+
+message StreamingSummaryResponse {
+  bool success = 1;
+  string session_id = 2;
+  int32 slot_number = 3;
+  int64 total_streamed_score = 4;
+  int32 total_events_processed = 5;
+  string message = 6;
+}
+
+message WatchAllLobbiesRequest {
+}
+
+service GameSessionService {
+  rpc AddPlayer(AddPlayerRequest) returns (AddPlayerResponse);
+  rpc KickPlayer(KickPlayerRequest) returns (KickPlayerResponse);
+  rpc LaunchSession(LaunchSessionRequest) returns (LaunchSessionResponse);
+  rpc WatchLobby(WatchLobbyRequest) returns (stream SessionLobbyResponse);
+  rpc GetLobby(GetLobbyRequest) returns (SessionLobbyResponse);
+  rpc WatchAllLobbies(WatchAllLobbiesRequest) returns (stream SessionLobbyResponse);
+  rpc RecordBallScore(RecordBallScoreRequest) returns (RecordBallScoreResponse);
+  rpc StreamLiveTelemetry(stream ScoreDeltaRequest) returns (StreamingSummaryResponse);
+}

@@ -1,0 +1,86 @@
+server:
+  port: ${PORT:8085}
+
+spring:
+  application:
+    name: leaderboard-bff
+  threads:
+    virtual:
+      enabled: true
+
+  # ===================================================================
+  # SPRING CLOUD GATEWAY CONFIGURATION
+  # ===================================================================
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 10s
+      routes:
+        # Downstream Core API Route with Token Relay
+        - id: core-api-route
+          uri: ${CORE_API_URL:http://localhost:8080}
+          predicates:
+            - Path=/api/**
+          filters:
+            - TokenRelay=
+
+  # ===================================================================
+  # REDIS (Reactive Distributed Session Cache)
+  # ===================================================================
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000ms
+
+  # ===================================================================
+  # OAUTH2 / OIDC CLIENT CONFIGURATION (Keycloak / IdP)
+  # ===================================================================
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${OAUTH2_CLIENT_ID:worldpinball-bff}
+            client-secret: ${OAUTH2_CLIENT_SECRET:bff-secret}
+            scope: openid,profile,roles
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            issuer-uri: ${OAUTH2_ISSUER_URI:http://localhost:8081/realms/worldpinball}
+            user-name-attribute: preferred_username
+
+# ===================================================================
+# gRPC CLIENT CONFIGURATION (Core API connection)
+# ===================================================================
+grpc:
+  client:
+    gameSessionService:
+      address: ${GRPC_CORE_API_ADDRESS:static://localhost:9090}
+      negotiation-type: plaintext
+
+# ===================================================================
+# ACTUATOR & PROMETHEUS METRICS
+# ===================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+# ===================================================================
+# LOGGING
+# ===================================================================
+logging:
+  level:
+    root: INFO
+    com.worldpinball.bff: DEBUG
+    org.springframework.cloud.gateway: INFO
