@@ -19,7 +19,7 @@ spring:
       routes:
         # Downstream Core API Route with Token Relay
         - id: core-api-route
-          uri: ${CORE_API_URL:http://localhost:8080}
+          uri: ${CORE_API_URL:http://localhost:7085}
           predicates:
             - Path=/api/**
           filters:

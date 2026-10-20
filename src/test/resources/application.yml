@@ -8,7 +8,7 @@ spring:
     gateway:
       routes:
         - id: core-api-route
-          uri: http://localhost:8080
+          uri: http://localhost:7085
           predicates:
             - Path=/api/**
   autoconfigure:
