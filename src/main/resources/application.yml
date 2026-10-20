@@ -50,7 +50,7 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           keycloak:
-            issuer-uri: ${OAUTH2_ISSUER_URI:http://localhost:8081/realms/worldpinball}
+            issuer-uri: ${OAUTH2_ISSUER_URI:http://localhost:8082/realms/worldpinball}
             user-name-attribute: preferred_username
 
 # ===================================================================
