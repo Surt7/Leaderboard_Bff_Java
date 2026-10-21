@@ -5,6 +5,7 @@ import com.worldpinball.leaderboard.grpc.v1.SessionLobbyResponse;
 import com.worldpinball.leaderboard.grpc.v1.WatchAllLobbiesRequest;
 import com.worldpinball.leaderboard.grpc.v1.WatchLobbyRequest;
 import io.grpc.stub.StreamObserver;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,9 @@ import reactor.core.publisher.Sinks;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -26,9 +30,15 @@ public class LobbyRelayService implements ILobbyRelayService {
     private final ConcurrentHashMap<String, SessionLobbyResponse> cachedLobbies = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> activeSessions = new ConcurrentHashMap<>();
     private final AtomicBoolean isWatchingAll = new AtomicBoolean(false);
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     private final Sinks.Many<SessionLobbyResponse> lobbyEventSink =
         Sinks.many().multicast().onBackpressureBuffer();
+
+    @PreDestroy
+    public void destroy() {
+        scheduler.shutdown();
+    }
 
     @Override
     public Collection<SessionLobbyResponse> getCurrentLobbies() {
@@ -72,7 +82,10 @@ public class LobbyRelayService implements ILobbyRelayService {
         if (!isWatchingAll.compareAndSet(false, true)) {
             return;
         }
+        startWatchingAllLobbies();
+    }
 
+    private void startWatchingAllLobbies() {
         log.info("Starting gRPC global admin lobby watch stream");
         WatchAllLobbiesRequest request = WatchAllLobbiesRequest.newBuilder().build();
 
@@ -85,14 +98,22 @@ public class LobbyRelayService implements ILobbyRelayService {
 
             @Override
             public void onError(Throwable t) {
-                log.warn("Global admin lobby stream error: {}", t.getMessage());
-                isWatchingAll.set(false);
+                log.warn("Global admin lobby stream error: {}. Will reconnect in 2s...", t.getMessage());
+                scheduler.schedule(() -> {
+                    if (isWatchingAll.get()) {
+                        startWatchingAllLobbies();
+                    }
+                }, 2, TimeUnit.SECONDS);
             }
 
             @Override
             public void onCompleted() {
-                log.info("Global admin lobby stream completed");
-                isWatchingAll.set(false);
+                log.info("Global admin lobby stream completed. Will reconnect in 2s...");
+                scheduler.schedule(() -> {
+                    if (isWatchingAll.get()) {
+                        startWatchingAllLobbies();
+                    }
+                }, 2, TimeUnit.SECONDS);
             }
         });
     }
