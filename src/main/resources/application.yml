@@ -63,7 +63,7 @@ grpc:
       negotiation-type: plaintext
 
 # ===================================================================
-# ACTUATOR & PROMETHEUS METRICS
+# ACTUATOR & PROMETHEUS METRICS & OPENTELEMETRY TRACING
 # ===================================================================
 management:
   endpoints:
@@ -75,6 +75,16 @@ management:
       show-details: always
       probes:
         enabled: true
+  tracing:
+    sampling:
+      probability: ${OTEL_TRACES_SAMPLER_ARG:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+    metrics:
+      export:
+        enabled: ${OTEL_METRICS_EXPORTER_ENABLED:false}
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
 
 # ===================================================================
 # LOGGING
