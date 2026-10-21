@@ -61,6 +61,10 @@ grpc:
     gameSessionService:
       address: ${GRPC_CORE_API_ADDRESS:static://localhost:9090}
       negotiation-type: plaintext
+      enable-keep-alive: true
+      keep-alive-without-calls: true
+      keep-alive-time: 30s
+      keep-alive-timeout: 10s
 
 # ===================================================================
 # ACTUATOR & PROMETHEUS METRICS & OPENTELEMETRY TRACING
