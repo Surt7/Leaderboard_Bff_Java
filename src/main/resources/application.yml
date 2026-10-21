@@ -1,5 +1,7 @@
 server:
   port: ${PORT:8085}
+  forward-headers-strategy: framework
+  max-http-request-header-size: 64KB
 
 spring:
   application:

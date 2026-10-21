@@ -15,6 +15,8 @@ import org.springframework.web.server.session.CookieWebSessionIdResolver;
 import org.springframework.web.server.session.WebSessionIdResolver;
 
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
+import org.springframework.security.oauth2.client.web.server.DefaultServerOAuth2AuthorizationRequestResolver;
 
 import java.time.Duration;
 import java.util.List;
@@ -56,7 +58,11 @@ public class BffSecurityConfiguration {
                 .anyExchange().permitAll()
             );
 
-        clientRegistrationRepository.ifPresent(repo -> spec.oauth2Login(Customizer.withDefaults()));
+        clientRegistrationRepository.ifPresent(repo -> {
+            var resolver = new DefaultServerOAuth2AuthorizationRequestResolver(repo);
+            resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
+            spec.oauth2Login(oauth2 -> oauth2.authorizationRequestResolver(resolver));
+        });
 
         return spec.build();
     }
