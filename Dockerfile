@@ -1,5 +1,5 @@
 # Stage 1: Build with Maven (Java 21)
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM eclipse-temurin:21-jdk AS build
 WORKDIR /workspace
 
 # Copy Maven wrapper and pom.xml
