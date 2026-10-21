@@ -12,8 +12,11 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class AuthController {
@@ -45,9 +48,9 @@ public class AuthController {
 
         String subject = authentication.getName();
         String username = authentication.getName();
-        List<String> roles = authentication.getAuthorities().stream()
+        List<String> roles = new ArrayList<>(authentication.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
-            .toList();
+            .toList());
 
         if (authentication.getPrincipal() instanceof OAuth2User oauth2User) {
             Object sub = oauth2User.getAttribute("sub");
@@ -57,6 +60,28 @@ public class AuthController {
             Object preferred = oauth2User.getAttribute("preferred_username");
             if (preferred != null) {
                 username = preferred.toString();
+            }
+
+            // Extract Keycloak realm roles mapped to "roles" claim or "realm_access.roles"
+            Object rolesClaim = oauth2User.getAttribute("roles");
+            if (rolesClaim instanceof Collection<?> col) {
+                for (Object r : col) {
+                    if (r != null && !roles.contains(r.toString())) {
+                        roles.add(r.toString());
+                    }
+                }
+            }
+
+            Object realmAccess = oauth2User.getAttribute("realm_access");
+            if (realmAccess instanceof Map<?, ?> map) {
+                Object rRoles = map.get("roles");
+                if (rRoles instanceof Collection<?> col) {
+                    for (Object r : col) {
+                        if (r != null && !roles.contains(r.toString())) {
+                            roles.add(r.toString());
+                        }
+                    }
+                }
             }
         }
 
