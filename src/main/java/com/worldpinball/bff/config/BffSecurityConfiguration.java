@@ -84,7 +84,7 @@ public class BffSecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:4200", "https://localhost:4200"));
+        config.setAllowedOriginPatterns(List.of("https://*.worldpinball.local", "http://*.worldpinball.local", "https://worldpinball.local", "http://worldpinball.local", "http://localhost:*", "https://localhost:*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
