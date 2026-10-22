@@ -33,7 +33,7 @@ public class LobbyRelayService implements ILobbyRelayService {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     private final Sinks.Many<SessionLobbyResponse> lobbyEventSink =
-        Sinks.many().multicast().onBackpressureBuffer();
+        Sinks.many().multicast().directBestEffort();
 
     @PreDestroy
     public void destroy() {
@@ -92,8 +92,12 @@ public class LobbyRelayService implements ILobbyRelayService {
         grpcStub.watchAllLobbies(request, new StreamObserver<>() {
             @Override
             public void onNext(SessionLobbyResponse lobby) {
+                log.info("LobbyRelayService: Received lobby from gRPC: {} state={}", lobby.getSessionId(), lobby.getSessionState());
                 cachedLobbies.put(lobby.getSessionId(), lobby);
-                lobbyEventSink.tryEmitNext(lobby);
+                var emitResult = lobbyEventSink.tryEmitNext(lobby);
+                if (emitResult.isFailure()) {
+                    log.warn("LobbyRelayService: Failed to emit lobby event to sink: {}", emitResult);
+                }
             }
 
             @Override

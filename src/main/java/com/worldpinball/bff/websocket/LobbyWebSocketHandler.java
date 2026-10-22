@@ -124,7 +124,10 @@ public class LobbyWebSocketHandler implements WebSocketHandler {
 
                     relayService.getAllLobbyUpdates()
                         .map(lobby -> toSignalREvent(lobby, isSignalR.get()))
-                        .doOnNext(outboundSink::tryEmitNext)
+                        .doOnNext(msg -> {
+                            log.info("LobbyWebSocketHandler: Pushing live update to WebSocket session {}", session.getId());
+                            outboundSink.tryEmitNext(msg);
+                        })
                         .takeUntilOther(session.closeStatus())
                         .subscribe();
 
@@ -183,7 +186,7 @@ public class LobbyWebSocketHandler implements WebSocketHandler {
 
     private String toSignalREvent(SessionLobbyResponse lobby, boolean signalR) {
         try {
-            String protoJson = JsonFormat.printer().print(lobby);
+            String protoJson = JsonFormat.printer().includingDefaultValueFields().print(lobby);
             if (signalR) {
                 return "{\"type\":1,\"target\":\"LobbyStateUpdated\",\"arguments\":[" + protoJson + "]}" + RECORD_SEPARATOR;
             }
