@@ -34,12 +34,19 @@ message KickPlayerResponse {
   string message = 3;
 }
 
+enum SlotStatus {
+  SLOT_STATUS_OPEN = 0;
+  SLOT_STATUS_OCCUPIED = 1;
+  SLOT_STATUS_LOCKED = 2;
+}
+
 // Session watch
 message PlayerSlotInfo {
   int32 slot_number = 1;
   bool is_occupied = 2;
   optional string user_id = 3;
   optional string guest_initials = 4;
+  SlotStatus status = 5;
 }
 
 message GetLobbyRequest {

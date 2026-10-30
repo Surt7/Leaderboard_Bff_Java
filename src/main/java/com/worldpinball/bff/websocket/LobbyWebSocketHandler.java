@@ -106,6 +106,11 @@ public class LobbyWebSocketHandler implements WebSocketHandler {
                         log.warn("Invalid sessionId format in JoinLobby: {}", sessionId);
                     }
 
+                    relayService.getCurrentLobbies().stream()
+                        .filter(l -> sessionId.equals(l.getSessionId()))
+                        .findFirst()
+                        .ifPresent(cached -> outboundSink.tryEmitNext(toSignalREvent(cached, isSignalR.get())));
+
                     relayService.getLobbyUpdates(sessionId)
                         .map(lobby -> toSignalREvent(lobby, isSignalR.get()))
                         .doOnNext(outboundSink::tryEmitNext)
@@ -159,6 +164,11 @@ public class LobbyWebSocketHandler implements WebSocketHandler {
                     log.warn("Invalid sessionId format: {}", sessionId);
                 }
 
+                relayService.getCurrentLobbies().stream()
+                    .filter(l -> sessionId.equals(l.getSessionId()))
+                    .findFirst()
+                    .ifPresent(cached -> outboundSink.tryEmitNext(toSignalREvent(cached, false)));
+
                 relayService.getLobbyUpdates(sessionId)
                     .map(lobby -> toSignalREvent(lobby, false))
                     .doOnNext(outboundSink::tryEmitNext)
@@ -186,7 +196,10 @@ public class LobbyWebSocketHandler implements WebSocketHandler {
 
     private String toSignalREvent(SessionLobbyResponse lobby, boolean signalR) {
         try {
-            String protoJson = JsonFormat.printer().includingDefaultValueFields().print(lobby);
+            String protoJson = JsonFormat.printer()
+                .includingDefaultValueFields()
+                .printingEnumsAsInts()
+                .print(lobby);
             if (signalR) {
                 return "{\"type\":1,\"target\":\"LobbyStateUpdated\",\"arguments\":[" + protoJson + "]}" + RECORD_SEPARATOR;
             }

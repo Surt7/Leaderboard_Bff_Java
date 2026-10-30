@@ -28,6 +28,13 @@ spring:
             - Path=/api/**
           filters:
             - TokenRelay=
+        # Downstream GraphQL Route with Token Relay
+        - id: graphql-route
+          uri: ${CORE_API_URL:http://localhost:7085}
+          predicates:
+            - Path=/graphql
+          filters:
+            - TokenRelay=
 
   # ===================================================================
   # REDIS (Reactive Distributed Session Cache)
