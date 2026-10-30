@@ -1,11 +1,17 @@
 package com.worldpinball.bff.controllers;
 
+import com.worldpinball.bff.dto.RegisterPlayerRequest;
+import com.worldpinball.bff.dto.RegisterUserResult;
+import com.worldpinball.bff.services.IKeycloakAdminService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
@@ -22,6 +28,12 @@ import java.util.Map;
 public class AuthController {
 
     public record UserInfoDto(String subject, String username, List<String> roles) {}
+
+    private final IKeycloakAdminService keycloakAdminService;
+
+    public AuthController(IKeycloakAdminService keycloakAdminService) {
+        this.keycloakAdminService = keycloakAdminService;
+    }
 
     @GetMapping("/alive")
     public Mono<ResponseEntity<String>> alive() {
@@ -86,5 +98,36 @@ public class AuthController {
         }
 
         return Mono.just(ResponseEntity.ok(new UserInfoDto(subject, username, roles)));
+    }
+
+    @PostMapping("/api/auth/register")
+    public Mono<ResponseEntity<?>> register(@RequestBody RegisterPlayerRequest request) {
+        if (request == null) {
+            return Mono.just(ResponseEntity.badRequest().body(Map.of("error", "Données de formulaire manquantes.")));
+        }
+
+        return keycloakAdminService.registerUser(request.username(), request.email(), request.password())
+                .map(result -> switch (result) {
+                    case RegisterUserResult.Success s ->
+                            ResponseEntity.status(HttpStatus.CREATED)
+                                    .header(HttpHeaders.LOCATION, "/api/auth/user/" + s.userId())
+                                    .body(Map.of("success", true, "userId", s.userId()));
+
+                    case RegisterUserResult.UsernameConflict c ->
+                            ResponseEntity.status(HttpStatus.CONFLICT)
+                                    .body(Map.of("error", c.message(), "field", "username"));
+
+                    case RegisterUserResult.EmailConflict c ->
+                            ResponseEntity.status(HttpStatus.CONFLICT)
+                                    .body(Map.of("error", c.message(), "field", "email"));
+
+                    case RegisterUserResult.ValidationError v ->
+                            ResponseEntity.badRequest()
+                                    .body(Map.of("error", v.message()));
+
+                    case RegisterUserResult.Failure f ->
+                            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                    .body(Map.of("error", f.message()));
+                });
     }
 }
